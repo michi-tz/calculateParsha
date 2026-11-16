@@ -234,9 +234,10 @@ function p.computeParsha(y, m, d, israel)
 end
 
 ---------------------------------------------------------------------------
--- נקודות כניסה מוויקי (#invoke)
+-- API לפי טבלת ארגומנטים: p._<שם>(args). args היא טבלה רגילה;
+-- date = "YYYY-MM-DD" (ברירת מחדל: היום), והדגלים מקבלים גם boolean וגם "yes"/"no".
 ---------------------------------------------------------------------------
-local ISRAEL_UTC_OFFSET = 2 * 3600 -- קירוב: שעון ישראל רגיל (UTC+2), ללא שעון קיץ
+local ISRAEL_UTC_OFFSET = 2 * 3600 -- גיבוי מחוץ לוויקי בלבד: UTC+2 קבוע, ללא שעון קיץ
 
 local function errorSpan(msg)
     return '<span class="error">' .. msg .. '</span>'
@@ -246,10 +247,19 @@ local function getArgsFrom(frame)
     return require('Module:Arguments').getArgs(frame)
 end
 
-local function today()
+-- התאריך הלועזי של היום: y, m, d.
+-- בוויקי: לפי אזור הזמן המקומי של האתר ($wgLocaltimezone), כולל שעון קיץ.
+-- מחוץ לוויקי (בדיקות): קירוב קבוע של UTC+2.
+function p.today()
+    if type(mw) == 'table' and mw.getContentLanguage then
+        local s = mw.getContentLanguage():formatDate('Y-n-j', nil, true)
+        local y, m, d = tostring(s):match('^(%d+)-(%d+)-(%d+)$')
+        if y then return tonumber(y), tonumber(m), tonumber(d) end
+    end
     local t = os.date('!*t', os.time() + ISRAEL_UTC_OFFSET)
     return t.year, t.month, t.day
 end
+local today = p.today
 
 -- מחזיר y, m, d או nil, הודעת שגיאה
 local function parseDate(s)
@@ -278,8 +288,8 @@ local function flag(args, name)
     return require('Module:Yesno')(v, false) == true
 end
 
-function p.getParsha(frame)
-    local args = getArgsFrom(frame)
+function p._getParsha(args)
+    args = args or {}
     local y, m, d = parseDate(args.date)
     if not y then return errorSpan(m) end
     local r = p.computeParsha(y, m, d, isIsrael(args))
@@ -307,19 +317,16 @@ function p.getParsha(frame)
     return "'''פרשת " .. r.name .. "'''" .. suffix
 end
 
-function p.getParshaName(frame)
-    local args = getArgsFrom(frame)
-    -- העתקה מפורשת לפי שם: טבלת הארגומנטים של Module:Arguments היא proxy עצל,
-    -- ואין להסתמך על pairs כדי למנות אותה.
-    local copy = {
+function p._getParshaName(args)
+    args = args or {}
+    return p._getParsha({
         date = args.date, israel = args.israel, diaspora = args.diaspora,
-        special = args.special, plain = "yes",
-    }
-    return p.getParsha(copy)
+        special = args.special, plain = true,
+    })
 end
 
-function p.getSpecialShabbat(frame)
-    local args = getArgsFrom(frame)
+function p._getSpecialShabbat(args)
+    args = args or {}
     local y, m, d = parseDate(args.date)
     if not y then return errorSpan(m) end
     return table.concat(p.computeParsha(y, m, d, isIsrael(args)).special, ", ")
@@ -333,8 +340,8 @@ function p.listAllParshiot(frame)
     return table.concat(result, "\n")
 end
 
-function p.checkIfHoliday(frame)
-    local args = getArgsFrom(frame)
+function p._checkIfHoliday(args)
+    args = args or {}
     if not args.date then
         return "שגיאה: חסר פרמטר date"
     end
@@ -347,8 +354,8 @@ function p.checkIfHoliday(frame)
     return string.format("לא (%d ב%s %d)", info.hebrewDay, info.hebrewMonth, info.hebrewYear)
 end
 
-function p.getDateInfo(frame)
-    local args = getArgsFrom(frame)
+function p._getDateInfo(args)
+    args = args or {}
     if not args.date then
         return "שגיאה: חסר פרמטר date"
     end
@@ -369,8 +376,8 @@ function p.getDateInfo(frame)
     )
 end
 
-function p.getYearSchedule(frame)
-    local args = getArgsFrom(frame)
+function p._getYearSchedule(args)
+    args = args or {}
     local hy = tonumber(args.year)
     if args.year and args.year ~= "" and not hy then
         return errorSpan("שגיאה: שנה עברית לא תקינה")
@@ -396,6 +403,17 @@ function p.getYearSchedule(frame)
     end
     rows[#rows + 1] = "|}"
     return table.concat(rows, "\n")
+end
+
+---------------------------------------------------------------------------
+-- עטיפות #invoke: רק מפרסרות את ארגומנטי ה-frame וקוראות ל-p._<שם>(args).
+-- ממודול אחר יש לקרוא ישירות ל-p._<שם>{ ... } או ל-p.computeParsha.
+---------------------------------------------------------------------------
+for _, name in ipairs({ 'getParsha', 'getParshaName', 'getSpecialShabbat',
+    'checkIfHoliday', 'getDateInfo', 'getYearSchedule' }) do
+    p[name] = function(frame)
+        return p['_' .. name](getArgsFrom(frame))
+    end
 end
 
 return p

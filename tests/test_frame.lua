@@ -45,5 +45,36 @@ T.ok(sched:sub(-2) == '|}', 'schedule closed')
 T.ok(P.getYearSchedule(frame({ year = 'abc' })):find('class="error"', 1, true) ~= nil, 'schedule bad year')
 T.ok(P.getYearSchedule(frame({ year = '5782', diaspora = 'yes' })):find('אחרון של פסח', 1, true) ~= nil, 'schedule diaspora')
 
+-- API ישיר למודולים אחרים: טבלת ארגומנטים רגילה, דגלים כ-boolean
+T.eq(P._getParsha({ date = '2026-03-14' }), "'''פרשת ויקהל-פקודי'''", '_getParsha')
+T.eq(P._getParsha({ date = '2026-03-14', plain = true, special = true }), 'ויקהל-פקודי (שבת החודש)', '_getParsha booleans')
+T.eq(P._getParshaName({ date = '2022-04-23', diaspora = true }), 'אחרון של פסח', '_getParshaName diaspora=true')
+T.eq(P._getParshaName({ date = '2022-04-23', israel = false }), 'אחרון של פסח', '_getParshaName israel=false')
+T.eq(P._getParshaName({ date = '2022-04-23', israel = true }), 'אחרי מות', '_getParshaName israel=true')
+T.eq(P._getSpecialShabbat({ date = '2026-03-14' }), 'שבת החודש', '_getSpecialShabbat')
+T.eq(P._checkIfHoliday({ date = '2025-10-04' }), 'לא (12 בתשרי 5786)', '_checkIfHoliday')
+T.ok(P._getDateInfo({ date = '2025-10-03' }):find('5786', 1, true) ~= nil, '_getDateInfo')
+T.ok(P._getYearSchedule({ year = 5786 }):find('| 2026-03-14 ||', 1, true) ~= nil, '_getYearSchedule numeric year')
+T.ok(P._getParsha():find("'''", 1, true) ~= nil, '_getParsha without args = today')
+local src = { date = '2026-03-14' }
+P._getParshaName(src)
+T.eq(src.plain, nil, '_getParshaName does not mutate caller args')
+
 -- modules load without MediaWiki globals
 T.eq(mw, nil, 'no mw global needed')
+
+-- today(): מחוץ לוויקי גיבוי os.date; בוויקי לפי השעון המקומי של האתר
+local ty, tm, td = P.today()
+T.ok(type(ty) == 'number' and tm >= 1 and tm <= 12 and td >= 1 and td <= 31, 'today fallback')
+local seen
+mw = { getContentLanguage = function()
+    return { formatDate = function(_, fmt, ts, loc) seen = { fmt, ts, loc }; return '2026-3-14' end }
+end }
+local y2, m2, d2 = P.today()
+T.eq(y2 .. '-' .. m2 .. '-' .. d2, '2026-3-14', 'today via mw')
+T.eq(seen[3], true, 'today asks for wiki-local time')
+T.eq(P._getParshaName({}), 'ויקהל-פקודי', 'default date uses mw today')
+T.eq(P.getParshaName(frame({})), 'ויקהל-פקודי', 'frame default date uses mw today')
+mw = { getContentLanguage = function() return { formatDate = function() return 'garbage' end } end }
+T.ok(type((P.today())) == 'number', 'today falls back when mw output is unparsable')
+mw = nil
