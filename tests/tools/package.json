@@ -1,0 +1,6 @@
+{
+  "name": "parsha-fixture-gen",
+  "private": true,
+  "description": "Dev-only oracle generator for tests/fixtures/saturdays.tsv",
+  "dependencies": { "@hebcal/core": "6.16.1" }
+}

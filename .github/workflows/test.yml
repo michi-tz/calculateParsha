@@ -1,0 +1,21 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lua:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua 5.1 (same version as Scribunto)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lua5.1
+      - name: Syntax check
+        run: for f in Module_*.lua; do luac5.1 -p "$f"; done
+      - name: Run tests
+        run: lua5.1 tests/run.lua
