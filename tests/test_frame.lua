@@ -5,6 +5,9 @@ T.eq(P.getParsha(frame({ date = '2026-03-14' })), "'''פרשת ויקהל-פקו
 T.eq(P.getParsha(frame({ date = '2026-03-10' })), "'''פרשת ויקהל-פקודי'''", 'weekday -> next Saturday')
 T.eq(P.getParsha(frame({ date = '2026-03-14', plain = 'yes' })), 'ויקהל-פקודי', 'plain')
 T.eq(P.getParshaName(frame({ date = '2026-03-14' })), 'ויקהל-פקודי', 'getParshaName')
+-- ארגומנטים כ-proxy עצל (כמו Module:Arguments): pairs לא מונה אותם
+local lazy = setmetatable({}, { __index = { date = '2022-04-23', diaspora = 'yes' } })
+T.eq(P.getParshaName(frame(lazy)), 'אחרון של פסח', 'getParshaName with lazy args proxy')
 T.eq(P.getParsha(frame({ date = '2026-03-14', special = 'yes' })), "'''פרשת ויקהל-פקודי''' (שבת החודש)", 'special')
 T.eq(P.getParsha(frame({ date = '2026-03-14', special = 'yes', plain = 'yes' })), 'ויקהל-פקודי (שבת החודש)', 'special plain')
 T.eq(P.getSpecialShabbat(frame({ date = '2026-03-14' })), 'שבת החודש', 'getSpecialShabbat')

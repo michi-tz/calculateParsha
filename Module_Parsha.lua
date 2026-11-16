@@ -309,9 +309,12 @@ end
 
 function p.getParshaName(frame)
     local args = getArgsFrom(frame)
-    local copy = {}
-    for k, v in pairs(args) do copy[k] = v end
-    copy.plain = "yes"
+    -- העתקה מפורשת לפי שם: טבלת הארגומנטים של Module:Arguments היא proxy עצל,
+    -- ואין להסתמך על pairs כדי למנות אותה.
+    local copy = {
+        date = args.date, israel = args.israel, diaspora = args.diaspora,
+        special = args.special, plain = "yes",
+    }
     return p.getParsha(copy)
 end
 
