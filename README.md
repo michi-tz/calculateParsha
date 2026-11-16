@@ -112,6 +112,25 @@
 ## Lua API
 
 ### Module:Parsha
+
+#### שימוש ממודול אחר
+
+לכל פונקציית `#invoke` יש גרסה עם קו תחתון שמקבלת טבלת ארגומנטים רגילה, בלי `frame`: `p._getParsha`, `p._getParshaName`, `p._getSpecialShabbat`, `p._checkIfHoliday`, `p._getDateInfo`, `p._getYearSchedule`. הפרמטרים זהים לאלה של `#invoke`; הדגלים (`israel`, `diaspora`, `plain`, `special`) מקבלים גם boolean וגם `"yes"`/`"no"`, ו-`year` יכול להיות מספר. הפונקציות מחזירות את אותה מחרוזת שמחזיר `#invoke`.
+
+```lua
+local parsha = require('Module:Parsha')
+
+parsha._getParshaName{ date = '2018-05-12', diaspora = true }  -- "בהר-בחקתי"
+parsha._getParsha{ special = true }                             -- הפרשה של השבת הקרובה, בעיצוב ויקי
+
+-- נתונים גולמיים במקום מחרוזת:
+local r = parsha.computeParsha(2025, 10, 18, true)
+-- r.name, r.parshiot, r.holiday, r.special, r.saturday, r.hebrew
+local y, m, d = parsha.today()  -- התאריך הלועזי של היום לפי שעון הוויקי
+```
+
+פונקציות ה-`_` דורשות את `Module:Yesno`; `computeParsha`, `getYearScheduleData` ו-`today` אינן תלויות באף מודול חיצוני.
+
 - `p.parshiot` – טבלת 54 שמות הפרשיות לפי הסדר.
 - `p.parshaName(list)` – מחבר רשימת אינדקסים של פרשיות לשם מחובר (למשל `בהר-בחקתי`).
 - `p.getYearScheduleData(hy, israel)` – לוח השבתות של שנה עברית; כל רשומה כוללת `abs`, תאריך עברי, `holiday` ו-`parshiot`. התוצאה נשמרת במטמון.
@@ -149,7 +168,7 @@
 lua5.1 tests/run.lua
 ```
 
-הבדיקות כוללות 35873 טענות (assertions). טבלת ההשוואה `tests/fixtures/saturdays.tsv` כוללת 6054 שבתות של השנים העבריות 5745 עד 5860, והיא נוצרה על ידי `@hebcal/core` (גרסה 6.16.1). ה-`@hebcal/core` משמש רק ככלי פיתוח (oracle) ואינו נדרש להרצת הבדיקות או לשימוש בוויקי. לחידוש הטבלה:
+הבדיקות כוללות 35891 טענות (assertions). טבלת ההשוואה `tests/fixtures/saturdays.tsv` כוללת 6054 שבתות של השנים העבריות 5745 עד 5860, והיא נוצרה על ידי `@hebcal/core` (גרסה 6.16.1). ה-`@hebcal/core` משמש רק ככלי פיתוח (oracle) ואינו נדרש להרצת הבדיקות או לשימוש בוויקי. לחידוש הטבלה:
 
 ```
 cd tests/tools && npm install && node gen_fixture.mjs
@@ -159,7 +178,7 @@ cd tests/tools && npm install && node gen_fixture.mjs
 
 ## הגבלות והערות
 
-- **"היום"** מחושב עם היסט קבוע של UTC+2 (שעון ישראל רגיל). אין התחשבות בשעון קיץ, ולכן בתאריכי מעבר השעון ייתכן הבדל של יום.
+- **"היום"** נקבע בוויקי לפי אזור הזמן המקומי של האתר (`$wgLocaltimezone`, כולל שעון קיץ) דרך `mw.getContentLanguage():formatDate`. מחוץ לוויקי (בבדיקות) משמש קירוב קבוע של UTC+2. היום מתחלף בחצות ולא בשקיעה.
 - **טווח אימות**: המנוע נבדק מול הטבלה לשנים העבריות 5745 עד 5860. אם הכללים אינם מצליחים לשבץ את הפרשיות בשנה מסוימת, המנוע זורק שגיאה במקום להחזיר לוח שגוי.
 - **קריאות החג** (תורה, מפטיר והפטרה) נכתבו בטבלה `READINGS` ב-`Module_HolidayChecker.lua`. יש לבדוק אותן על ידי אדם בקיא בהלכה ובמנהגי הקריאה לפני שימוש ציבורי.
 - **שינוי שובר תאימות**: הפונקציות העזר `getHebrewMonthName` ו-`getHebrewMonthNumber` משתמשות כעת במספור פנימי (ניסן=1 ... תשרי=7 ... אדר ב'=13), ולא במספור הקודם. פונקציות ה-fallback הישנות וכן `getDayOfYear` הוסרו.
